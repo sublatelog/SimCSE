@@ -204,10 +204,37 @@ def cl_forward(cls,
     if num_sent == 3:
         # Note that weights are actually logits of weights
         z3_weight = cls.model_args.hard_negative_weight
+        
+        print("z3_weight")
+        print(z3_weight)
+        print("cos_sim.size(-1)")
+        print(cos_sim.size(-1))
+        print("z1_z3_cos.size(-1)")
+        print(z1_z3_cos.size(-1))
+        print("[0.0] * (cos_sim.size(-1) - z1_z3_cos.size(-1))")
+        print([0.0] * (cos_sim.size(-1) - z1_z3_cos.size(-1)))
+        print("[0.0] * 1 + [z3_weight]")
+        print([0.0] * 1 + [z3_weight])
+        print("(z1_z3_cos.size(-1) - 1- 1)")
+        print((z1_z3_cos.size(-1) - 1 - 1))
+        print("[0.0] * (z1_z3_cos.size(-1) - 1 - 1)")
+        print([0.0] * (z1_z3_cos.size(-1) - 1 - 1))
+        
         weights = torch.tensor(
             [[0.0] * (cos_sim.size(-1) - z1_z3_cos.size(-1)) + [0.0] * i + [z3_weight] + [0.0] * (z1_z3_cos.size(-1) - i - 1) for i in range(z1_z3_cos.size(-1))]
         ).to(cls.device)
         cos_sim = cos_sim + weights
+        
+        print("cos_sim")
+        print(cos_sim)
+        print(cos_sim.shape)
+        print("weights")
+        print(weights)
+        print(weights.shape)
+        print("cos_sim")
+        print(cos_sim)
+        print(cos_sim.shape)
+
 
     loss = loss_fct(cos_sim, labels)
 
