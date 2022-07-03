@@ -185,12 +185,7 @@ def cl_forward(cls,
 
         # Since allgather results do not have gradients, we replace the
         # current process's corresponding embeddings with original tensors
-        
-        print("z1")
-        print(z1)
-        print("dist.get_rank()")
-        print(dist.get_rank())
-        
+                
         z1_list[dist.get_rank()] = z1
         z2_list[dist.get_rank()] = z2
         # Get full batch embeddings: (bs x N, hidden)
@@ -204,30 +199,72 @@ def cl_forward(cls,
     if num_sent >= 3:
         z1_z3_cos = cls.sim(z1.unsqueeze(1), z3.unsqueeze(0))
         
-        print("z1")
-        print(z1)
-        print(z1.shape)
-        print("z3")
-        print(z3)
-        print(z3.shape)
-        print("z1_z3_cos")
-        print(z1_z3_cos)
-        print(z1_z3_cos.shape)
+        """
+        z1
+        tensor([[ 0.0576, -0.0826, -0.2676,  ..., -0.0122, -0.1350, -0.0439],
+                [ 0.2001, -0.1118, -0.2815,  ...,  0.0638,  0.0611,  0.1840],
+                [ 0.0819,  0.0080, -0.2423,  ..., -0.0220, -0.1937,  0.1233],
+                ...,
+                [-0.0112, -0.1528, -0.3906,  ...,  0.0523,  0.1556, -0.0981],
+                [-0.1808, -0.0493, -0.2654,  ...,  0.1387, -0.0247,  0.0267],
+                [ 0.0415, -0.3049, -0.0193,  ..., -0.0894, -0.0871, -0.0126]],
+               device='cuda:0', dtype=torch.float16, grad_fn=<SelectBackward0>)
+        torch.Size([64, 768])
+        
+        z3
+        tensor([[-0.1561, -0.4399, -0.5557,  ...,  0.2771,  0.3518,  0.0348],
+                [ 0.1907, -0.2350,  0.0058,  ...,  0.0086,  0.0513, -0.0756],
+                [-0.0615, -0.0783, -0.4993,  ...,  0.1516, -0.3218, -0.1865],
+                ...,
+                [-0.3254, -0.0461, -0.2043,  ...,  0.4307,  0.0619,  0.0532],
+                [ 0.0284, -0.2158, -0.1652,  ..., -0.0278, -0.0503, -0.2625],
+                [ 0.2551,  0.1414, -0.1980,  ...,  0.0859,  0.5103, -0.1824]],
+               device='cuda:0', dtype=torch.float16, grad_fn=<SelectBackward0>)
+        torch.Size([64, 768])
+
+        z1_z3_cos
+        tensor([[ 6.0377,  0.2151,  7.2397,  ...,  6.9829,  9.2627,  2.4735],
+                [ 1.8395,  9.3744,  2.5906,  ...,  3.4693,  4.0849,  1.7064],
+                [ 0.5016,  1.8103, 12.8856,  ...,  0.4008,  2.2307,  0.6834],
+                ...,
+                [ 6.1295, -1.5519,  8.5433,  ...,  4.5514,  6.3753,  1.8960],
+                [ 6.0247,  4.3278,  1.8561,  ...,  3.5240,  8.5716,  5.0580],
+                [ 1.8318,  2.0099,  8.1921,  ...,  4.6016,  3.0699,  5.9619]],
+               device='cuda:0', grad_fn=<DivBackward0>)
+        torch.Size([64, 64])
+        
+        """
         
         cos_sim = torch.cat([cos_sim, z1_z3_cos], 1)
         
+        """       
+        cos_sim
+        tensor([[10.6976,  5.6306,  5.6036,  ...,  6.9829,  9.2627,  2.4735],
+                [ 3.6117, 14.6013,  1.3984,  ...,  3.4693,  4.0849,  1.7064],
+                [ 1.7606,  2.0325, 16.0121,  ...,  0.4008,  2.2307,  0.6834],
+                ...,
+                [ 5.5091,  2.0576,  6.4810,  ...,  4.5514,  6.3753,  1.8960],
+                [ 8.6117,  5.6610,  1.6193,  ...,  3.5240,  8.5716,  5.0580],
+                [ 4.7620,  3.7732,  6.3944,  ...,  4.6016,  3.0699,  5.9619]],
+               device='cuda:0', grad_fn=<CatBackward0>)
+        torch.Size([64, 128])
         
-        print("cos_sim")
-        print(cos_sim)
-        print(cos_sim.shape)
         
-        print("torch.arange(cos_sim.size(0))")
-        print(torch.arange(cos_sim.size(0)))
-        print(torch.arange(cos_sim.size(0)).shape)
-        
-        print("torch.arange(cos_sim.size(0)).long()")
-        print(torch.arange(cos_sim.size(0)).long())
-        print(torch.arange(cos_sim.size(0)).long().shape)
+        torch.arange(cos_sim.size(0))
+        tensor([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+                18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+                36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53,
+                54, 55, 56, 57, 58, 59, 60, 61, 62, 63])
+        torch.Size([64])
+
+        torch.arange(cos_sim.size(0)).long()
+        tensor([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+                18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+                36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53,
+                54, 55, 56, 57, 58, 59, 60, 61, 62, 63])
+        torch.Size([64])
+
+        """
 
     labels = torch.arange(cos_sim.size(0)).long().to(cls.device)
     loss_fct = nn.CrossEntropyLoss()
@@ -313,13 +350,22 @@ def cl_forward(cls,
         torch.Size([64, 128])
         """
 
-
+    print("cos_sim")
+    print(cos_sim)
+    print(cos_sim.shape)
+    
+    print("labels")
+    print(labels)
+    print(labels.shape)
+        
+        
     loss = loss_fct(cos_sim, labels)
     
-    
-    print("loss")
-    print(loss)
-    print(loss.shape)
+    """
+    loss
+    tensor(0.6263, device='cuda:0', grad_fn=<NllLossBackward0>)
+    torch.Size([])
+    """
 
     # Calculate loss for MLM
     if mlm_outputs is not None and mlm_labels is not None:
