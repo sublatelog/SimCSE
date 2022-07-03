@@ -199,7 +199,10 @@ def cl_forward(cls,
 
     labels = torch.arange(cos_sim.size(0)).long().to(cls.device)
     loss_fct = nn.CrossEntropyLoss()
-
+    
+    print("num_sent")
+    print(num_sent)
+    
     # Calculate loss with hard negatives
     if num_sent == 3:
         # Note that weights are actually logits of weights
