@@ -185,58 +185,127 @@ def cl_forward(cls,
 
         # Since allgather results do not have gradients, we replace the
         # current process's corresponding embeddings with original tensors
+        
+        print("z1")
+        print(z1)
+        print("dist.get_rank()")
+        print(dist.get_rank())
+        
         z1_list[dist.get_rank()] = z1
         z2_list[dist.get_rank()] = z2
         # Get full batch embeddings: (bs x N, hidden)
         z1 = torch.cat(z1_list, 0)
         z2 = torch.cat(z2_list, 0)
+        
+        
 
     cos_sim = cls.sim(z1.unsqueeze(1), z2.unsqueeze(0))
     # Hard negative
     if num_sent >= 3:
         z1_z3_cos = cls.sim(z1.unsqueeze(1), z3.unsqueeze(0))
+        
+        print("z1")
+        print(z1)
+        print("z3")
+        print(z3)
+        print("z1_z3_cos")
+        print(z1_z3_cos)
+        
         cos_sim = torch.cat([cos_sim, z1_z3_cos], 1)
+        
+        
+        print("cos_sim")
+        print(cos_sim)
+        
+        print("torch.arange(cos_sim.size(0))")
+        print(torch.arange(cos_sim.size(0)))
+        
+        print("torch.arange(cos_sim.size(0)).long()")
+        print(torch.arange(cos_sim.size(0)).long())
 
     labels = torch.arange(cos_sim.size(0)).long().to(cls.device)
     loss_fct = nn.CrossEntropyLoss()
-    
-    print("num_sent")
-    print(num_sent)
-    
+        
     # Calculate loss with hard negatives
     if num_sent == 3:
         # Note that weights are actually logits of weights
         z3_weight = cls.model_args.hard_negative_weight
         
-        print("z3_weight")
-        print(z3_weight)
-        print("cos_sim.size(-1)")
-        print(cos_sim.size(-1))
-        print("z1_z3_cos.size(-1)")
-        print(z1_z3_cos.size(-1))
-        print("[0.0] * (cos_sim.size(-1) - z1_z3_cos.size(-1))")
-        print([0.0] * (cos_sim.size(-1) - z1_z3_cos.size(-1)))
-        print("[0.0] * 1 + [z3_weight]")
-        print([0.0] * 1 + [z3_weight])
-        print("(z1_z3_cos.size(-1) - 1- 1)")
-        print((z1_z3_cos.size(-1) - 1 - 1))
-        print("[0.0] * (z1_z3_cos.size(-1) - 1 - 1)")
-        print([0.0] * (z1_z3_cos.size(-1) - 1 - 1))
+        """
+        z3_weight
+        0
+        
+        cos_sim.size(-1)
+        128
+        
+        z1_z3_cos.size(-1)
+        64
+        
+        [0.0] * (cos_sim.size(-1) - z1_z3_cos.size(-1))
+        [0.0,...,0.0]
+        (1,64)
+        
+        [0.0] * 1 + [z3_weight]
+        [0.0, 0]
+        
+        (z1_z3_cos.size(-1) - 1- 1):64-1-1=62
+        62
+        
+        [0.0] * (z1_z3_cos.size(-1) - 1 - 1)
+        [0.0,...,0.0]
+        (1,62)       
+        
+        weights = [0.0,...,0.0](1,64(128-64))_[0.0, 0]_[0.0,...,0.0](1,62)
+        [0.0,0,|w,|0,0,0,0,0,0,0,0.0]
+        [0.0,0,|0,w,|0,0,0,0,0,0,0.0]
+        [0.0,0,|0,0,w,|0,0,0,0,0,0.0]
+        [0.0,0,|0,0,0,w,|0,0,0,0,0.0]
+        [0.0,0,|0,0,0,0,w,|0,0,0,0.0]
+        [0.0,0,|0,0,0,0,0,w,|0,0,0.0]
+        [0.0,0,|0,0,0,0,0,0,0,w,|0.0]
+        [0.0,0,|0,0,0,0,0,0,0,0,w,|0]
+        [0.0,0,|0,0,0,0,0,0,0,0,0,w|]
+        (64,(128-64)+64)
+        """
+ 
         
         weights = torch.tensor(
             [[0.0] * (cos_sim.size(-1) - z1_z3_cos.size(-1)) + [0.0] * i + [z3_weight] + [0.0] * (z1_z3_cos.size(-1) - i - 1) for i in range(z1_z3_cos.size(-1))]
         ).to(cls.device)
         cos_sim = cos_sim + weights
         
-        print("cos_sim")
-        print(cos_sim)
-        print(cos_sim.shape)
-        print("weights")
-        print(weights)
-        print(weights.shape)
-        print("cos_sim")
-        print(cos_sim)
-        print(cos_sim.shape)
+        """
+        cos_sim
+        tensor([[14.4570, 15.6312, 13.8193,  ..., 13.3656, 14.1912, 11.1795],
+                [12.3104, 16.1059, 12.0197,  ..., 12.0728, 13.1709, 10.1004],
+                [10.7271, 12.9041, 16.4579,  ..., 11.1108, 11.1661, 14.5156],
+                ...,
+                [16.2244, 14.6237, 10.0858,  ..., 14.7130, 15.6477, 10.5588],
+                [17.1314, 15.5205, 10.7414,  ..., 14.9796, 17.5348, 11.5293],
+                [15.4914, 15.3698, 11.6255,  ..., 14.9121, 16.0790, 12.9899]],
+               device='cuda:0', grad_fn=<AddBackward0>)
+        torch.Size([64, 128])
+        weights
+        tensor([[0., 0., 0.,  ..., 0., 0., 0.],
+                [0., 0., 0.,  ..., 0., 0., 0.],
+                [0., 0., 0.,  ..., 0., 0., 0.],
+                ...,
+                [0., 0., 0.,  ..., 0., 0., 0.],
+                [0., 0., 0.,  ..., 0., 0., 0.],
+                [0., 0., 0.,  ..., 0., 0., 0.]], device='cuda:0')
+        torch.Size([64, 128])
+        
+        cos_sim
+        tensor([[14.4570, 15.6312, 13.8193,  ..., 13.3656, 14.1912, 11.1795],
+                [12.3104, 16.1059, 12.0197,  ..., 12.0728, 13.1709, 10.1004],
+                [10.7271, 12.9041, 16.4579,  ..., 11.1108, 11.1661, 14.5156],
+                ...,
+                [16.2244, 14.6237, 10.0858,  ..., 14.7130, 15.6477, 10.5588],
+                [17.1314, 15.5205, 10.7414,  ..., 14.9796, 17.5348, 11.5293],
+                [15.4914, 15.3698, 11.6255,  ..., 14.9121, 16.0790, 12.9899]],
+               device='cuda:0', grad_fn=<AddBackward0>)
+        torch.Size([64, 128])
+        """
 
 
     loss = loss_fct(cos_sim, labels)
