@@ -206,22 +206,28 @@ def cl_forward(cls,
         
         print("z1")
         print(z1)
+        print(z1.shape)
         print("z3")
         print(z3)
+        print(z3.shape)
         print("z1_z3_cos")
         print(z1_z3_cos)
+        print(z1_z3_cos.shape)
         
         cos_sim = torch.cat([cos_sim, z1_z3_cos], 1)
         
         
         print("cos_sim")
         print(cos_sim)
+        print(cos_sim.shape)
         
         print("torch.arange(cos_sim.size(0))")
         print(torch.arange(cos_sim.size(0)))
+        print(torch.arange(cos_sim.size(0)).shape)
         
         print("torch.arange(cos_sim.size(0)).long()")
         print(torch.arange(cos_sim.size(0)).long())
+        print(torch.arange(cos_sim.size(0)).long().shape)
 
     labels = torch.arange(cos_sim.size(0)).long().to(cls.device)
     loss_fct = nn.CrossEntropyLoss()
@@ -268,7 +274,7 @@ def cl_forward(cls,
         (64,(128-64)+64)
         """
  
-        
+        # 1_2はweight:0、1_3にweightを設定
         weights = torch.tensor(
             [[0.0] * (cos_sim.size(-1) - z1_z3_cos.size(-1)) + [0.0] * i + [z3_weight] + [0.0] * (z1_z3_cos.size(-1) - i - 1) for i in range(z1_z3_cos.size(-1))]
         ).to(cls.device)
@@ -309,6 +315,11 @@ def cl_forward(cls,
 
 
     loss = loss_fct(cos_sim, labels)
+    
+    
+    print("loss")
+    print(loss)
+    print(loss.shape)
 
     # Calculate loss for MLM
     if mlm_outputs is not None and mlm_labels is not None:
